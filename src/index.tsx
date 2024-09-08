@@ -2,7 +2,8 @@ import { Elysia } from "elysia";
 import { html, Html } from "@elysiajs/html";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api";
-// require("dotenv").config();
+import { Id } from "../convex/_generated/dataModel";
+
 const client = new ConvexHttpClient(process.env.CONVEX_URL!);
 
 const PostsDisplay = async () => {
@@ -23,8 +24,8 @@ const PostsDisplay = async () => {
     );
     return (
       <div>
-        {postsWithUsers.map((post: any, user: any) => (
-          <Post key={post._id} post={post} user={user} />
+        {postsWithUsers.map((post: any) => (
+          <Post key={post._id} post={post} />
         ))}
       </div>
     );
@@ -34,11 +35,13 @@ const PostsDisplay = async () => {
   }
 };
 
-const Post = ({ post, user }: { post: any; user: any }) => {
-  console.log("post.user: " + post.user[0].username);
+const Post = ({ post }: { post: any }) => {
   return (
     <div class="border p-4 mb-4 rounded-lg">
-      <h3 class="text-xl font-bold">{post.title}</h3>
+      <div class="flex justify-between">
+        <h3 class="text-xl font-bold">{post.title}</h3>
+        <span>{timeSince(new Date(post._creationTime))} ago</span>
+      </div>
       <p>{post.content}</p>
       <p>Likes: {post.likes_count}</p>
       {post.user ? (
@@ -47,6 +50,16 @@ const Post = ({ post, user }: { post: any; user: any }) => {
         <p>Author: Unable to load</p>
       )}
     </div>
+  );
+};
+
+const PostForm = () => {
+  return (
+    <form hx-post="/post" hx-target="#posts" hx-swap="outerHTML">
+      <input type="text" name="title" placeholder="Title" required />
+      <textarea name="content" placeholder="Content" required></textarea>
+      <button type="submit">Submit</button>
+    </form>
   );
 };
 
@@ -66,14 +79,72 @@ const app = new Elysia()
       <body class="p-4">
         <h1 class="text-3xl font-bold mb-4">The Status Quo</h1>
         <div>
-          <h2 class="text-2xl font-semibold mb-2">Posts</h2>
-          {await PostsDisplay()}
+          <div id="posts">
+            <h2 class="text-2xl font-semibold mb-2">Posts</h2>
+            {await PostsDisplay()}
+          </div>
+          <div class="">
+            <PostForm />
+          </div>
         </div>
       </body>
     </html>
   ))
+  .post("/post", async ({ body }) => {
+    try {
+      const { title, content } = body as { title: string; content: string };
+      // Assuming you have a userId available. You might need to implement user authentication.
+      const userId = "j571kqvfm76cqgjty0f1ap4p1h70a2qc" as Id<"users">;
+      await client.mutation(api.tasks.postPost, {
+        title,
+        content,
+        userId: userId,
+      });
+      return await PostsDisplay();
+    } catch (error) {
+      console.error("Error creating post:", error);
+      return <div>Error creating post. Please try again.</div>;
+    }
+  })
   .listen(3000);
 
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
 );
+
+function timeSince(date: Date) {
+  let seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+
+  let interval = seconds / 31536000;
+
+  if (interval > 2) {
+    return Math.floor(interval) + " years";
+  } else if (interval > 1) {
+    return Math.floor(interval) + " year";
+  }
+  interval = seconds / 2592000;
+  if (interval > 2) {
+    return Math.floor(interval) + " months";
+  } else if (interval > 1) {
+    return Math.floor(interval) + " month";
+  }
+  interval = seconds / 86400;
+  if (interval > 2) {
+    return Math.floor(interval) + " days";
+  } else if (interval > 1) {
+    return Math.floor(interval) + " day";
+  }
+  interval = seconds / 3600;
+  if (interval > 2) {
+    return Math.floor(interval) + " hours";
+  } else if (interval > 1) {
+    return Math.floor(interval) + " hour";
+  }
+  interval = seconds / 60;
+  if (interval > 2) {
+    return Math.floor(interval) + " minutes";
+  } else if (interval > 1) {
+    return Math.floor(interval) + " minute";
+  }
+  return Math.floor(seconds) + " seconds";
+}
