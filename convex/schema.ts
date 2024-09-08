@@ -1,7 +1,8 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-
+import { authTables } from "@convex-dev/auth/server";
 export default defineSchema({
+  ...authTables,
   posts: defineTable({
     content: v.string(),
     likes_count: v.float64(),
@@ -14,5 +15,6 @@ export default defineSchema({
     bio: v.optional(v.string()),
     liked_posts: v.array(v.id("posts")),
     username: v.string(),
-  }).index("by_username", ["username"]),
+    tokenIdentifier: v.string(),
+  }).index("by_token", ["tokenIdentifier"]),
 });

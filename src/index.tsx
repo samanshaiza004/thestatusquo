@@ -3,6 +3,7 @@ import { html, Html } from "@elysiajs/html";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
+import authApp from "./auth";
 
 const client = new ConvexHttpClient(process.env.CONVEX_URL!);
 
@@ -53,7 +54,18 @@ const Post = ({ post }: { post: any }) => {
   );
 };
 
-const PostForm = () => {
+const PostForm = async () => {
+  const user = await client.query(api.tasks.getCurrentUser);
+  if (!user) {
+    return (
+      <div>
+        <p>Please log in to create a post.</p>
+        <a href="/auth" class="text-blue-500 hover:underline">
+          Log in
+        </a>
+      </div>
+    );
+  }
   return (
     <form hx-post="/post" hx-target="#posts" hx-swap="outerHTML">
       <input type="text" name="title" placeholder="Title" required />
@@ -62,9 +74,9 @@ const PostForm = () => {
     </form>
   );
 };
-
 const app = new Elysia()
   .use(html())
+  .use(authApp)
   .get("/", async () => (
     <html lang="en">
       <head>
@@ -93,17 +105,34 @@ const app = new Elysia()
   .post("/post", async ({ body }) => {
     try {
       const { title, content } = body as { title: string; content: string };
-      // Assuming you have a userId available. You might need to implement user authentication.
-      const userId = "j571kqvfm76cqgjty0f1ap4p1h70a2qc" as Id<"users">;
+      const user = await client.query(api.tasks.getCurrentUser);
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
       await client.mutation(api.tasks.postPost, {
         title,
         content,
-        userId: userId,
       });
       return await PostsDisplay();
     } catch (error) {
       console.error("Error creating post:", error);
       return <div>Error creating post. Please try again.</div>;
+    }
+  })
+  .get("/auth/callback", async ({ request }) => {
+    const url = new URL(request.url);
+    const code = url.searchParams.get("code");
+    const state = url.searchParams.get("state");
+
+    if (code && state) {
+      try {
+        return new Response(null, {
+          status: 302,
+          headers: {
+            Location: "/",
+          },
+        });
+      } catch (error) {}
     }
   })
   .listen(3000);
