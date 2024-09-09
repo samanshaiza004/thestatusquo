@@ -31,20 +31,18 @@ const authApp = new Elysia()
       </head>
       <body>
         <div>
-          <LoginButton provider="GitHub" />
+          <LoginButton provider="github" />
         </div>
       </body>
     </html>
   ))
   .post("/auth/signin/:provider", async ({ params }) => {
-    const { url } = await client.mutation(api.tasks.signIn, {
+    console.log(params);
+    const { redirect } = await client.action(api.auth.signIn, {
       provider: params.provider,
     });
     return new Response(null, {
       status: 302,
-      headers: {
-        Location: url,
-      },
     });
   });
 

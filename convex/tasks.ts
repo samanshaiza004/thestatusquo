@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-import auth from "./auth";
+import { auth } from "./auth";
 export const getPosts = query({
   args: {},
   handler: async (ctx) => {
