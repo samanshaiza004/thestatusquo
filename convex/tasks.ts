@@ -22,7 +22,7 @@ export const postPost = mutation({
   args: {
     title: v.string(),
     content: v.string(),
-    userId: v.id("users")
+    userId: v.id("users"),
   },
   handler: async (ctx, { title, content, userId }) => {
     const user = await ctx.db.get(userId);
@@ -55,9 +55,7 @@ export const createUser = mutation({
     // Check if we've already stored this identity before.
     const existingUser = await ctx.db
       .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", tokenIdentifier)
-      )
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", tokenIdentifier))
       .first();
     if (existingUser) {
       // If the user exists, update their information
@@ -90,16 +88,18 @@ export const getUserByToken = query({
 export const getPostById = query({
   args: { postId: v.id("posts") },
   handler: async (ctx, { postId }) => {
-    return await ctx.db.query("posts").filter(q => q.eq(q.field("_id"), postId));
-  }
-})
+    return await ctx.db
+      .query("posts")
+      .filter((q) => q.eq(q.field("_id"), postId));
+  },
+});
 
 export const deletePostById = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, { postId }) => {
-    const post = getPostById(ctx, { postId })
+    const post = getPostById(ctx, { postId });
     if (!post) throw new Error("No post with _id " + postId + " exists");
 
-    await ctx.db.delete(postId)
-  }
-})
+    await ctx.db.delete(postId);
+  },
+});

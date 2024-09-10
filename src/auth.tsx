@@ -16,7 +16,7 @@ const authApp = new Elysia()
       ],
     })
   )
-  .get("/login", ({ html }) => 
+  .get("/login", ({ html }) =>
     html(
       `<html>
         <body>
@@ -36,16 +36,18 @@ const authApp = new Elysia()
   .get("/auth/github/callback", async ({ oauth2, set, cookie, redirect }) => {
     try {
       const token = await oauth2.authorize("GitHub");
-      
+
       // Fetch user info from GitHub
-      const userResponse = await fetch('https://api.github.com/user', {
+      const userResponse = await fetch("https://api.github.com/user", {
         headers: {
-          'Authorization': `Bearer ${token.accessToken}`
-        }
+          Authorization: `Bearer ${token.accessToken}`,
+        },
       });
 
       if (!userResponse.ok) {
-        throw new Error(`GitHub API responded with status: ${userResponse.status}`);
+        throw new Error(
+          `GitHub API responded with status: ${userResponse.status}`
+        );
       }
 
       const githubUser = await userResponse.json();
@@ -77,10 +79,10 @@ const authApp = new Elysia()
       cookie.tokenIdentifier.set({
         httpOnly: true,
         maxAge: 60 * 60 * 24 * 7,
-      })
+      });
 
       // Redirect to the main page
-     
+
       return redirect("/");
     } catch (error) {
       console.error("Authentication error:", error);
@@ -93,7 +95,7 @@ const authApp = new Elysia()
   })
   .onError(({ code, error, set }) => {
     console.error(`${code} error:`, error);
-    set.status = code === 'NOT_FOUND' ? 404 : 500;
+    set.status = code === "NOT_FOUND" ? 404 : 500;
     return `<html>
       <body>
         <h1>Error</h1>

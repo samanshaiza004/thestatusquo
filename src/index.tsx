@@ -63,9 +63,11 @@ const Post = ({ post }: { post: any }) => {
   );
 };
 
-const PostForm = async ({ cookie } : { cookie: any }) => {
+const PostForm = async ({ cookie }: { cookie: any }) => {
   const userId = cookie.userId.value as Id<"users"> | undefined;
-  const user = userId ? await client.query(api.tasks.getCurrentUser, { userId }) : null;
+  const user = userId
+    ? await client.query(api.tasks.getCurrentUser, { userId })
+    : null;
 
   if (!user) {
     return (
@@ -79,12 +81,33 @@ const PostForm = async ({ cookie } : { cookie: any }) => {
   }
   return (
     <div>
-      <form hx-post="/post" hx-target="#posts" hx-swap="outerHTML" hx-on:after-request="this.reset()" class="space-y-2">
-        <input type="text" name="title" placeholder="Title" required class="w-full p-2 border rounded" />
-        <textarea name="content" placeholder="Content" required class="w-full p-2 border rounded"></textarea>
-        <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Submit</button>
+      <form
+        hx-post="/post"
+        hx-target="#posts"
+        hx-swap="outerHTML"
+        hx-on:after-request="this.reset()"
+        class="space-y-2"
+      >
+        <input
+          type="text"
+          name="title"
+          placeholder="Title"
+          required
+          class="w-full p-2 border rounded"
+        />
+        <textarea
+          name="content"
+          placeholder="Content"
+          required
+          class="w-full p-2 border rounded"
+        ></textarea>
+        <button
+          type="submit"
+          class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+        >
+          Submit
+        </button>
       </form>
-      
     </div>
   );
 };
@@ -94,7 +117,9 @@ const app = new Elysia()
   .use(authApp)
   .get("/", async ({ cookie }) => {
     const userId = cookie.userId.value as Id<"users"> | undefined;
-    const user = userId ? await client.query(api.tasks.getCurrentUser, { userId }) : null;
+    const user = userId
+      ? await client.query(api.tasks.getCurrentUser, { userId })
+      : null;
 
     return (
       <html lang="en">
@@ -113,12 +138,18 @@ const app = new Elysia()
             {user ? (
               <div class="flex items-center">
                 <span class="mr-4">Welcome, {user.username}</span>
-                <a href="/signout" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                <a
+                  href="/signout"
+                  class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                >
                   Sign Out
                 </a>
               </div>
             ) : (
-              <a href="/login" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+              <a
+                href="/login"
+                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              >
                 Log In
               </a>
             )}
@@ -151,9 +182,7 @@ const app = new Elysia()
       return await (
         <>
           {await PostsDisplay()}
-          <script>
-            document.body.dispatchEvent(new Event('resetForm'))
-          </script>
+          <script>document.body.dispatchEvent(new Event('resetForm'))</script>
         </>
       );
     } catch (error) {
@@ -162,12 +191,14 @@ const app = new Elysia()
     }
   })
   .get("/api/user", async ({ cookie }) => {
-    const userId = cookie.userId.value
+    const userId = cookie.userId.value;
     if (!userId) {
-      return { authenticated: false }
+      return { authenticated: false };
     }
-    const user = await client.query(api.tasks.getUserById, { userId: userId as Id<"users"> })
-    return { authenticated: true, user }
+    const user = await client.query(api.tasks.getUserById, {
+      userId: userId as Id<"users">,
+    });
+    return { authenticated: true, user };
   })
   .delete("/api/deletePost/:postId", async ({ params }) => {
     try {
@@ -179,7 +210,7 @@ const app = new Elysia()
       return <div>Error deleting post. Please try again.</div>;
     }
   })
-  .listen(3000);
+  .listen(process.env.PORT || 3000);
 
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
