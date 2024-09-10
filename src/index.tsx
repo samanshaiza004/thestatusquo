@@ -24,7 +24,7 @@ const PostsDisplay = async () => {
       })
     );
     return (
-      <div>
+      <div class="overflow-y-auto h-full">
         {postsWithUsers.map((post: any) => (
           <Post key={post._id} post={post} />
         ))}
@@ -38,7 +38,7 @@ const PostsDisplay = async () => {
 
 const Post = ({ post }: { post: any }) => {
   return (
-    <div class="border p-4 mb-4 rounded-lg">
+    <div class="border p-4 mb-4 rounded-lg bg-white">
       <div class="flex justify-between">
         <h3 class="text-xl font-bold">{post.title}</h3>
         <span>{timeSince(new Date(post._creationTime))} ago</span>
@@ -50,89 +50,133 @@ const Post = ({ post }: { post: any }) => {
       ) : (
         <p>Author: Unable to load</p>
       )}
+      <button
+        hx-delete={`/api/deletePost/${post._id}`}
+        hx-target="#posts"
+        hx-swap="outerHTML"
+        hx-confirm="Are you sure you want to delete this post?"
+        class="mt-2 bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+      >
+        Delete
+      </button>
     </div>
   );
 };
 
-const PostForm = async () => {
-  const user = await client.query(api.tasks.getCurrentUser);
+const PostForm = async ({ cookie } : { cookie: any }) => {
+  const userId = cookie.userId.value as Id<"users"> | undefined;
+  const user = userId ? await client.query(api.tasks.getCurrentUser, { userId }) : null;
+
   if (!user) {
     return (
       <div>
         <p>Please log in to create a post.</p>
-        <a href="/auth" class="text-blue-500 hover:underline">
+        <a href="/login" class="text-blue-500 hover:underline">
           Log in
         </a>
       </div>
     );
   }
   return (
-    <form hx-post="/post" hx-target="#posts" hx-swap="outerHTML">
-      <input type="text" name="title" placeholder="Title" required />
-      <textarea name="content" placeholder="Content" required></textarea>
-      <button type="submit">Submit</button>
-    </form>
+    <div>
+      <form hx-post="/post" hx-target="#posts" hx-swap="outerHTML" hx-on:after-request="this.reset()" class="space-y-2">
+        <input type="text" name="title" placeholder="Title" required class="w-full p-2 border rounded" />
+        <textarea name="content" placeholder="Content" required class="w-full p-2 border rounded"></textarea>
+        <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Submit</button>
+      </form>
+      
+    </div>
   );
 };
+
 const app = new Elysia()
   .use(html())
   .use(authApp)
-  .get("/", async () => (
-    <html lang="en">
-      <head>
-        <title>The Status Quo</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script
-          src="https://unpkg.com/htmx.org@2.0.2"
-          integrity="sha384-Y7hw+L/jvKeWIRRkqWYfPcvVxHzVzn5REgzbawhxAuQGwX1XWe70vji+VSeHOThJ"
-          crossorigin="anonymous"
-        ></script>
-      </head>
-      <body class="p-4">
-        <h1 class="text-3xl font-bold mb-4">The Status Quo</h1>
-        <div>
-          <div id="posts">
-            <h2 class="text-2xl font-semibold mb-2">Posts</h2>
-            {await PostsDisplay()}
-          </div>
-          <div class="">
-            <PostForm />
-          </div>
-        </div>
-      </body>
-    </html>
-  ))
-  .post("/post", async ({ body }) => {
+  .get("/", async ({ cookie }) => {
+    const userId = cookie.userId.value as Id<"users"> | undefined;
+    const user = userId ? await client.query(api.tasks.getCurrentUser, { userId }) : null;
+
+    return (
+      <html lang="en">
+        <head>
+          <title>The Status Quo</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <script
+            src="https://unpkg.com/htmx.org@2.0.2"
+            integrity="sha384-Y7hw+L/jvKeWIRRkqWYfPcvVxHzVzn5REgzbawhxAuQGwX1XWe70vji+VSeHOThJ"
+            crossorigin="anonymous"
+          ></script>
+        </head>
+        <body class="flex flex-col h-screen bg-gray-100">
+          <header class="bg-white shadow-md p-4 flex justify-between items-center">
+            <h1 class="text-3xl font-bold">The Status Quo</h1>
+            {user ? (
+              <div class="flex items-center">
+                <span class="mr-4">Welcome, {user.username}</span>
+                <a href="/signout" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                  Sign Out
+                </a>
+              </div>
+            ) : (
+              <a href="/login" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                Log In
+              </a>
+            )}
+          </header>
+          <main class="flex-grow flex flex-col overflow-hidden p-4">
+            <div id="posts" class="flex-grow overflow-y-auto mb-4">
+              <h2 class="text-2xl font-semibold mb-2">Posts</h2>
+              {await PostsDisplay()}
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-md">
+              <PostForm cookie={cookie} />
+            </div>
+          </main>
+        </body>
+      </html>
+    );
+  })
+  .post("/post", async ({ body, cookie }) => {
     try {
       const { title, content } = body as { title: string; content: string };
-      const user = await client.query(api.tasks.getCurrentUser);
-      if (!user) {
+      const userId = cookie.userId.value as Id<"users"> | undefined;
+      if (!userId) {
         throw new Error("User not authenticated");
       }
       await client.mutation(api.tasks.postPost, {
         title,
         content,
+        userId,
       });
-      return await PostsDisplay();
+      return await (
+        <>
+          {await PostsDisplay()}
+          <script>
+            document.body.dispatchEvent(new Event('resetForm'))
+          </script>
+        </>
+      );
     } catch (error) {
       console.error("Error creating post:", error);
       return <div>Error creating post. Please try again.</div>;
     }
   })
-  .get("/auth/callback", async ({ request }) => {
-    const url = new URL(request.url);
-    const code = url.searchParams.get("code");
-    const state = url.searchParams.get("state");
-
-    if (code && state) {
-      try {
-        return new Response(null, {
-          status: 302,
-          headers: {
-            Location: "/",
-          },
-        });
-      } catch (error) {}
+  .get("/api/user", async ({ cookie }) => {
+    const userId = cookie.userId.value
+    if (!userId) {
+      return { authenticated: false }
+    }
+    const user = await client.query(api.tasks.getUserById, { userId: userId as Id<"users"> })
+    return { authenticated: true, user }
+  })
+  .delete("/api/deletePost/:postId", async ({ params }) => {
+    try {
+      const postId = params.postId as Id<"posts">;
+      await client.mutation(api.tasks.deletePostById, { postId });
+      return await PostsDisplay();
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      return <div>Error deleting post. Please try again.</div>;
     }
   })
   .listen(3000);

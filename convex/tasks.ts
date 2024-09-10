@@ -1,7 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-import { auth } from "./auth";
 export const getPosts = query({
   args: {},
   handler: async (ctx) => {
@@ -23,18 +22,10 @@ export const postPost = mutation({
   args: {
     title: v.string(),
     content: v.string(),
+    userId: v.id("users")
   },
-  handler: async (ctx, { title, content }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Unauthenticated");
-    }
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
-      .first();
+  handler: async (ctx, { title, content, userId }) => {
+    const user = await ctx.db.get(userId);
     if (!user) {
       throw new Error("User not found");
     }
@@ -48,19 +39,9 @@ export const postPost = mutation({
 });
 
 export const getCurrentUser = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return null;
-    }
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
-      .first();
-    return user;
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    return await ctx.db.get(userId);
   },
 });
 
@@ -68,21 +49,19 @@ export const createUser = mutation({
   args: {
     username: v.string(),
     avatar: v.optional(v.string()),
+    tokenIdentifier: v.string(),
   },
-  handler: async (ctx, { username, avatar }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Called createUser without authentication present");
-    }
-
+  handler: async (ctx, { username, avatar, tokenIdentifier }) => {
     // Check if we've already stored this identity before.
     const existingUser = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", tokenIdentifier)
       )
       .first();
     if (existingUser) {
+      // If the user exists, update their information
+      await ctx.db.patch(existingUser._id, { username, avatar });
       return existingUser._id;
     }
 
@@ -90,7 +69,7 @@ export const createUser = mutation({
     const userId = await ctx.db.insert("users", {
       username,
       avatar,
-      tokenIdentifier: identity.tokenIdentifier,
+      tokenIdentifier,
       liked_posts: [],
     });
 
@@ -98,14 +77,29 @@ export const createUser = mutation({
   },
 });
 
-export const signIn = mutation({
-  args: {
-    provider: v.string(),
-  },
-  handler: async (ctx, { provider }) => {
-    const url = await auth.signIn({
-      provider,
-    });
-    return url;
+export const getUserByToken = query({
+  args: { tokenIdentifier: v.string() },
+  handler: async (ctx, { tokenIdentifier }) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", tokenIdentifier))
+      .first();
   },
 });
+
+export const getPostById = query({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, { postId }) => {
+    return await ctx.db.query("posts").filter(q => q.eq(q.field("_id"), postId));
+  }
+})
+
+export const deletePostById = mutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, { postId }) => {
+    const post = getPostById(ctx, { postId })
+    if (!post) throw new Error("No post with _id " + postId + " exists");
+
+    await ctx.db.delete(postId)
+  }
+})

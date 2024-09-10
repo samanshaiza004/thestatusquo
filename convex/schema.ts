@@ -15,6 +15,6 @@ export default defineSchema({
     bio: v.optional(v.string()),
     liked_posts: v.array(v.id("posts")),
     username: v.string(),
-    tokenIdentifier: v.string(),
+    tokenIdentifier: v.optional(v.string()),
   }).index("by_token", ["tokenIdentifier"]),
 });
