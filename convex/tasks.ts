@@ -1,3 +1,4 @@
+// convex/tasks.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -95,11 +96,17 @@ export const getPostById = query({
 });
 
 export const deletePostById = mutation({
-  args: { postId: v.id("posts") },
-  handler: async (ctx, { postId }) => {
-    const post = getPostById(ctx, { postId });
+  args: { postId: v.id("posts"), userId: v.id("users") },
+  handler: async (ctx, { postId, userId }) => {
+    const post = await ctx.db.get(postId); // Ensure to await the post retrieval
     if (!post) throw new Error("No post with _id " + postId + " exists");
+    // Assuming you have access to the current user's ID in the context
+    if (post.userId !== userId) {
+      throw new Error("You are not authorized to delete this post");
+    }
 
     await ctx.db.delete(postId);
+
+    return "Post deleted successfully";
   },
 });

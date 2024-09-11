@@ -1,9 +1,12 @@
+// src/index.tsx
 import { Elysia } from "elysia";
 import { html, Html } from "@elysiajs/html";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
 import authApp from "./auth";
+
+import { LikeIcon, FilledLikeIcon } from "./icons/LikeIcons";
 
 const client = new ConvexHttpClient(process.env.CONVEX_URL!);
 
@@ -40,25 +43,37 @@ const Post = ({ post }: { post: any }) => {
   return (
     <div class="border p-4 mb-4 rounded-lg bg-white">
       <div class="flex justify-between">
-        <h3 class="text-xl font-bold">{post.title}</h3>
-        <span>{timeSince(new Date(post._creationTime))} ago</span>
+        <div class={"flex gap-2"}>
+          <h3 class="text-xl font-bold">{post.title}</h3>
+          {post.user ? (
+            <div class={"flex items-center gap-2"}>
+              <img src={post.user[0].avatar} class="w-5 h-5 rounded-full" />
+              <p>{post.user[0].username || "Unknown"}</p>
+            </div>
+          ) : (
+            <p>Unable to load</p>
+          )}
+        </div>
+        <div class={"flex gap-2 items-center"}>
+          <button
+            hx-delete={`/api/deletePost/${post._id}`}
+            hx-target="#posts"
+            hx-swap="outerHTML"
+            hx-confirm="Are you sure you want to delete this post?"
+            class="mt-2 bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+          >
+            Delete
+          </button>
+          <span>{timeSince(new Date(post._creationTime))} ago</span>
+        </div>
       </div>
       <p>{post.content}</p>
-      <p>Likes: {post.likes_count}</p>
-      {post.user ? (
-        <p>Author: {post.user[0].username || "Unknown"}</p>
-      ) : (
-        <p>Author: Unable to load</p>
-      )}
-      <button
-        hx-delete={`/api/deletePost/${post._id}`}
-        hx-target="#posts"
-        hx-swap="outerHTML"
-        hx-confirm="Are you sure you want to delete this post?"
-        class="mt-2 bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-      >
-        Delete
-      </button>
+      <div class="flex items-center gap-1">
+        <div class={"hover:bg-gray-100 cursor-pointer rounded-full"}>
+          <LikeIcon />
+        </div>
+        <span>{post.likes_count}</span>
+      </div>
     </div>
   );
 };
@@ -200,14 +215,19 @@ const app = new Elysia()
     });
     return { authenticated: true, user };
   })
-  .delete("/api/deletePost/:postId", async ({ params }) => {
+  .delete("/api/deletePost/:postId", async ({ cookie, params }) => {
     try {
+      const userId = cookie.userId.value as Id<"users"> | undefined;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+
       const postId = params.postId as Id<"posts">;
-      await client.mutation(api.tasks.deletePostById, { postId });
+      await client.mutation(api.tasks.deletePostById, { postId, userId });
       return await PostsDisplay();
-    } catch (error) {
-      console.error("Error deleting post:", error);
-      return <div>Error deleting post. Please try again.</div>;
+    } catch (error: any) {
+      alert(error.message);
+      return await PostsDisplay();
     }
   })
   .listen(process.env.PORT || 3000);
