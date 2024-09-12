@@ -245,6 +245,21 @@ const app = new Elysia()
       return await PostsDisplay();
     }
   })
+  .patch("/api/likePost/:postId", async ({ cookie, params }) => {
+    try {
+      const userId = cookie.userId.value as Id<"users"> | undefined;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+
+      const postId = params.postId as Id<"posts">;
+      await client.mutation(api.tasks.addLikeToPost, { postId, userId })
+      return await PostsDisplay();
+    } catch (error: any) {
+      alert(error.message);
+      return await PostsDisplay();
+    }
+  })
   .listen(3000);
 
 console.log(

@@ -98,9 +98,8 @@ export const getPostById = query({
 export const deletePostById = mutation({
   args: { postId: v.id("posts"), userId: v.id("users") },
   handler: async (ctx, { postId, userId }) => {
-    const post = await ctx.db.get(postId); // Ensure to await the post retrieval
+    const post = await ctx.db.get(postId);
     if (!post) throw new Error("No post with _id " + postId + " exists");
-    // Assuming you have access to the current user's ID in the context
     if (post.userId !== userId) {
       throw new Error("You are not authorized to delete this post");
     }
@@ -110,3 +109,26 @@ export const deletePostById = mutation({
     return "Post deleted successfully";
   },
 });
+
+export const addLikeToPost = mutation({
+  args: {
+    postId: v.id("posts"),
+    userId: v.id("users")
+  },
+  handler: async (ctx, {postId, userId}) => {
+  const post = await ctx.db.get(postId);
+  if (!post) throw new Error("No post with _id " + postId + " exists");
+  const user = await ctx.db.get(userId);
+  if (!user) throw new Error("You are not authorized to like this post");
+
+  user?.liked_posts.push(postId)
+  console.log(user?.liked_posts)
+  
+  await ctx.db.patch(postId, {
+    likes_count: post.likes_count + 1,
+  });
+
+  return "Like added successfully";
+
+  }
+})
