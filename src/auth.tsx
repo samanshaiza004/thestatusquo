@@ -1,4 +1,4 @@
-import Elysia, { redirect } from "elysia";
+import Elysia from "elysia";
 import { html, Html } from "@elysiajs/html";
 import { oauth2 } from "elysia-oauth2";
 import { ConvexHttpClient } from "convex/browser";
@@ -48,7 +48,6 @@ const authApp = new Elysia()
     try {
       const token = await oauth2.authorize("GitHub");
 
-      // Fetch user info from GitHub
       const userResponse = await fetch("https://api.github.com/user", {
         headers: {
           Authorization: `Bearer ${token.accessToken}`,
@@ -69,7 +68,6 @@ const authApp = new Elysia()
 
       const tokenIdentifier = `github:${githubUser.id}`;
 
-      // Use Convex client to create or log in user
       const userId = await client.mutation(api.tasks.createUser, {
         username: githubUser.login,
         avatar: githubUser.avatar_url,
@@ -79,8 +77,6 @@ const authApp = new Elysia()
       if (!userId) {
         throw new Error("Failed to create or retrieve user from database");
       }
-
-      // Set a cookie with the user ID
       cookie.userId.set({
         value: userId,
         httpOnly: true,
@@ -92,8 +88,6 @@ const authApp = new Elysia()
         maxAge: 60 * 60 * 24 * 7,
       });
 
-      // Redirect to the main page
-
       return redirect("/");
     } catch (error) {
       console.error("Authentication error:", error);
@@ -104,17 +98,7 @@ const authApp = new Elysia()
       return "Authentication failed due to an unknown error";
     }
   })
-  .onError(({ code, error, set }) => {
-    console.error(`${code} error:`, error);
-    set.status = code === "NOT_FOUND" ? 404 : 500;
-    return `<html>
-      <body>
-        <h1>Error</h1>
-        <p>${error.message}</p>
-        <a href="/">Go back to home</a>
-      </body>
-    </html>`;
-  })
+  
   .get("/signout", ({ cookie, redirect }) => {
     cookie.userId.remove();
     cookie.tokenIdentifier.remove();

@@ -110,25 +110,52 @@ export const deletePostById = mutation({
   },
 });
 
-export const addLikeToPost = mutation({
+export const modifyLikeToPost = mutation({
   args: {
     postId: v.id("posts"),
-    userId: v.id("users")
+    userId: v.id("users"),
   },
-  handler: async (ctx, {postId, userId}) => {
-  const post = await ctx.db.get(postId);
-  if (!post) throw new Error("No post with _id " + postId + " exists");
-  const user = await ctx.db.get(userId);
-  if (!user) throw new Error("You are not authorized to like this post");
+  handler: async (ctx, { postId, userId }) => {
+    // Fetch the post and user from the database
+    const post = await ctx.db.get(postId);
+    if (!post) throw new Error("No post with _id " + postId + " exists");
 
-  user?.liked_posts.push(postId)
-  console.log(user?.liked_posts)
-  
-  await ctx.db.patch(postId, {
-    likes_count: post.likes_count + 1,
-  });
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("You are not authorized to like this post");
 
-  return "Like added successfully";
 
-  }
-})
+    if (user.liked_posts.includes(postId)) {
+
+      const idx = user.liked_posts.indexOf(post._id);
+      user.liked_posts.splice(idx, 1);
+
+      // Update the user's liked_posts in the database
+      await ctx.db.patch(userId, {
+        liked_posts: user.liked_posts,
+      });
+
+
+      await ctx.db.patch(postId, {
+        likes_count: post.likes_count - 1,
+      });
+
+      console.log("Post unliked by user");
+    } else {
+
+      user.liked_posts.push(postId);
+
+      await ctx.db.patch(userId, {
+        liked_posts: user.liked_posts,
+      });
+
+      await ctx.db.patch(postId, {
+        likes_count: post.likes_count + 1,
+      });
+
+      console.log("Post liked by user");
+    }
+
+    const updatedPost = await ctx.db.get(postId);
+    return updatedPost?.likes_count;
+  },
+});

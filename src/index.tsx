@@ -7,6 +7,7 @@ import { Id } from "../convex/_generated/dataModel";
 import authApp from "./auth";
 
 import { LikeIcon, FilledLikeIcon } from "./icons/LikeIcons";
+import { TrashIcon } from "./icons/TrashIcon";
 
 const client = new ConvexHttpClient(process.env.CONVEX_URL!);
 
@@ -65,9 +66,9 @@ const Post = ({ post }: { post: any }) => {
             hx-target="#posts"
             hx-swap="outerHTML"
             hx-confirm="Are you sure you want to delete this post?"
-            class="bg-red-500 text-white px-2 py-1 hover:bg-red-600 text-sm sm:text-base"
+            class="bg-rose-400 text-white px-2 py-1 hover:bg-red-500 text-sm sm:text-base"
           >
-            Delete
+            <TrashIcon />
           </button>
           <span class="text-xs sm:text-sm">
             {timeSince(new Date(post._creationTime))} ago
@@ -76,10 +77,10 @@ const Post = ({ post }: { post: any }) => {
       </div>
       <p class="text-sm sm:text-base">{post.content}</p>
       <div class="flex items-center gap-1">
-        <div class="hover:bg-gray-100 cursor-pointer rounded-full p-1">
+        <div hx-patch={`/api/likePost/${post._id}`} hx-target="#posts" class="hover:bg-gray-100 cursor-pointer rounded-full p-1">
           <LikeIcon />
         </div>
-        <span class="text-sm sm:text-base">{post.likes_count}</span>
+        <span id={"like-count"} class="text-sm sm:text-base">{post.likes_count}</span>
       </div>
     </div>
   );
@@ -95,7 +96,7 @@ const PostForm = async ({ cookie }: { cookie: any }) => {
     return (
       <div>
         <p>Please log in to create a post.</p>
-        <a href="/login" class="text-blue-500 hover:underline">
+        <a href="/login" class="text-blue-400 hover:underline">
           Log in
         </a>
       </div>
@@ -125,7 +126,7 @@ const PostForm = async ({ cookie }: { cookie: any }) => {
         ></textarea>
         <button
           type="submit"
-          class="w-full bg-blue-500 text-white p-2 hover:bg-blue-600 text-sm sm:text-base"
+          class="w-full bg-blue-400 text-white p-2 hover:bg-blue-500 text-sm sm:text-base"
         >
           Submit
         </button>
@@ -170,7 +171,7 @@ const app = new Elysia()
                 </span>
                 <a
                   href="/signout"
-                  class="bg-red-500 text-white px-3 py-1 hover:bg-red-600 text-sm sm:text-base"
+                  class="bg-red-400 text-white px-3 py-1 hover:bg-red-500 text-sm sm:text-base"
                 >
                   Sign Out
                 </a>
@@ -178,7 +179,7 @@ const app = new Elysia()
             ) : (
               <a
                 href="/login"
-                class="bg-blue-500 text-white px-3 py-1 hover:bg-blue-600 text-sm sm:text-base"
+                class="bg-blue-400 text-white px-3 py-1 hover:bg-blue-500 text-sm sm:text-base"
               >
                 Log In
               </a>
@@ -186,7 +187,6 @@ const app = new Elysia()
           </header>
           <main class="flex-grow flex flex-col overflow-hidden p-2">
             <div id="posts" class="flex-grow overflow-y-auto mb-4">
-              <h2 class="text-2xl font-semibold mb-2">Posts</h2>
               {await PostsDisplay()}
             </div>
             <div class="bg-white p-2 shadow-md">
@@ -253,12 +253,38 @@ const app = new Elysia()
       }
 
       const postId = params.postId as Id<"posts">;
-      await client.mutation(api.tasks.addLikeToPost, { postId, userId })
-      return await PostsDisplay();
+      await client.mutation(api.tasks.modifyLikeToPost, { postId, userId })
+      return await PostsDisplay()
     } catch (error: any) {
       alert(error.message);
-      return await PostsDisplay();
+      return await PostsDisplay()
     }
+  })
+  .onError(({ code, error, set }) => {
+    console.error(`${code} error:`, error);
+    set.status = code === "NOT_FOUND" ? 404 : 500;
+    return `<html>
+      <head>
+      <title>The Status Quo</title>
+          <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, shrink-to-fit=no"
+          />
+
+          <script src="https://cdn.tailwindcss.com"></script>
+      </head>
+      <body>
+      <div class="grid place-items-center h-screen">
+        <div>
+          <h1 class="italic">where am i?</h1>
+          <br />  
+          <p>${error.message}</p>
+          <a class="text-3xl text-blue-600 hover:text-blue-800" href="/">Go back to home</a>
+        </div>
+      </div>
+
+      </body>
+    </html>`;
   })
   .listen(3000);
 
