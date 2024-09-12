@@ -11,7 +11,12 @@ import { TrashIcon } from "./icons/TrashIcon";
 
 const client = new ConvexHttpClient(process.env.CONVEX_URL!);
 
-const PostsDisplay = async () => {
+const PostsDisplay = async ({ cookie }: {cookie: any}) => {
+  const userId = cookie.userId.value as Id<"users"> | undefined;
+  const user = userId
+    ? await client.query(api.tasks.getCurrentUser, { userId })
+    : null;
+
   try {
     const posts = await client.query(api.tasks.getPosts);
     const postsWithUsers = await Promise.all(
@@ -29,9 +34,10 @@ const PostsDisplay = async () => {
     );
     return (
       <div class="overflow-y-auto h-full">
-        {postsWithUsers.map((post: any) => (
-          <Post key={post._id} post={post} />
-        ))}
+        {postsWithUsers.map(async (post: any) => (
+          <Post key={post._id} post={post} user={user} />
+        )
+        )}
       </div>
     );
   } catch (error) {
@@ -40,7 +46,8 @@ const PostsDisplay = async () => {
   }
 };
 
-const Post = ({ post }: { post: any }) => {
+const Post = ({ post, user }: { post: any, user: any }) => {
+  
   return (
     <div class="border p-2 mb-4 bg-white">
       <div class="flex justify-between flex-wrap">
@@ -61,7 +68,7 @@ const Post = ({ post }: { post: any }) => {
           )}
         </div>
         <div class="flex gap-2 items-center mt-2 sm:mt-0">
-          <button
+          {post?.userId === user._id ? <button
             hx-delete={`/api/deletePost/${post._id}`}
             hx-target="#posts"
             hx-swap="outerHTML"
@@ -70,6 +77,9 @@ const Post = ({ post }: { post: any }) => {
           >
             <TrashIcon />
           </button>
+          : null
+          }
+          
           <span class="text-xs sm:text-sm">
             {timeSince(new Date(post._creationTime))} ago
           </span>
@@ -77,8 +87,9 @@ const Post = ({ post }: { post: any }) => {
       </div>
       <p class="text-sm sm:text-base">{post.content}</p>
       <div class="flex items-center gap-1">
-        <div hx-patch={`/api/likePost/${post._id}`} hx-target="#posts" class="hover:bg-gray-100 cursor-pointer rounded-full p-1">
-          <LikeIcon />
+        <div hx-patch={`/api/likePost/${post._id}`} hx-target="#posts" class="hover:bg-gray-100 hover:fill-rose-500 cursor-pointer rounded-full p-1">
+          {user.liked_posts.includes(post._id) ? <FilledLikeIcon /> : <LikeIcon />}
+
         </div>
         <span id={"like-count"} class="text-sm sm:text-base">{post.likes_count}</span>
       </div>
@@ -187,7 +198,7 @@ const app = new Elysia()
           </header>
           <main class="flex-grow flex flex-col overflow-hidden p-2">
             <div id="posts" class="flex-grow overflow-y-auto mb-4">
-              {await PostsDisplay()}
+            {await PostsDisplay({ cookie })}
             </div>
             <div class="bg-white p-2 shadow-md">
               <PostForm cookie={cookie} />
@@ -209,12 +220,7 @@ const app = new Elysia()
         content,
         userId,
       });
-      return await (
-        <>
-          {await PostsDisplay()}
-          <script>document.body.dispatchEvent(new Event('resetForm'))</script>
-        </>
-      );
+      return await PostsDisplay({ cookie })
     } catch (error) {
       console.error("Error creating post:", error);
       return <div>Error creating post. Please try again.</div>;
@@ -239,10 +245,10 @@ const app = new Elysia()
 
       const postId = params.postId as Id<"posts">;
       await client.mutation(api.tasks.deletePostById, { postId, userId });
-      return await PostsDisplay();
+      return await PostsDisplay({ cookie })
     } catch (error: any) {
       alert(error.message);
-      return await PostsDisplay();
+      return await PostsDisplay({ cookie })
     }
   })
   .patch("/api/likePost/:postId", async ({ cookie, params }) => {
@@ -254,10 +260,10 @@ const app = new Elysia()
 
       const postId = params.postId as Id<"posts">;
       await client.mutation(api.tasks.modifyLikeToPost, { postId, userId })
-      return await PostsDisplay()
+      return await PostsDisplay({ cookie })
     } catch (error: any) {
       alert(error.message);
-      return await PostsDisplay()
+      return await PostsDisplay({ cookie })
     }
   })
   .onError(({ code, error, set }) => {
