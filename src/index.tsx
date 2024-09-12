@@ -47,6 +47,56 @@ const PostsDisplay = async ({ cookie }: {cookie: any}) => {
   }
 };
 
+const PostFullPage = ({ post, user }: { post: any, user: any | undefined}) => {
+  return (
+    <div class="border p-2 mb-2 bg-white">
+      <div class="flex justify-between flex-wrap">
+        <div class="flex flex-col sm:flex-row gap-2">
+          <h3 class="text-lg sm:text-xl font-bold">{post.title}</h3>
+          {post.user ? (
+            <div class="flex items-center gap-2">
+              <img
+                src={post.user[0].avatar}
+                class="w-10 h-10 sm:w-5 sm:h-5 rounded-full"
+              />
+              <p class="text-sm sm:text-base">
+                {post.user[0].username || "Unknown"}
+              </p>
+            </div>
+          ) : (
+            <p class="text-sm sm:text-base">Unable to load</p>
+          )}
+        </div>
+        <div class="flex gap-2 items-center mt-2 sm:mt-0">
+          {user && post?.userId === user._id ? <button
+            hx-delete={`/api/deletePost/${post._id}`}
+            hx-target="#posts"
+            hx-swap="outerHTML"
+            hx-confirm="Are you sure you want to delete this post?"
+            class="bg-rose-400 text-white px-2 py-1 hover:bg-red-500 text-sm sm:text-base"
+          >
+            <TrashIcon />
+          </button>
+          : null
+          }
+          
+          <span class="text-xs sm:text-sm">
+            {timeSince(new Date(post._creationTime))} ago
+          </span>
+        </div>
+      </div>
+      <p class="text-sm sm:text-base mb-2">{post.content}</p>
+      <div class="flex items-center gap-1">
+        <div hx-patch={`/api/likePost/${post._id}`} hx-target="#posts" class="hover:bg-gray-100 hover:fill-rose-500 cursor-pointer rounded-full p-1">
+          {user && user.liked_posts.includes(post._id) ? <FilledLikeIcon /> : <LikeIcon />}
+
+        </div>
+        <span id={"like-count"} class="text-sm sm:text-base">{post.likes_count}</span>
+      </div>
+    </div>
+  );
+}
+
 const Post = ({ post, user }: { post: any, user: any | undefined }) => {
   
   return (
@@ -265,6 +315,20 @@ const app = new Elysia()
     } catch (error: any) {
       alert(error.message);
       return await PostsDisplay({ cookie })
+    }
+  })
+  .get("/posts/:postId", async ({ cookie, params }) => {
+    try {
+      const userId = cookie.userId.value as Id<"users"> | undefined;
+    const user = userId
+    ? await client.query(api.tasks.getCurrentUser, { userId })
+    : null;
+
+      let postId = params.postId as Id<"posts">
+      const post = client.query(api.tasks.getPostById, { postId })
+      return PostFullPage({post, user});
+    } catch (error) {
+
     }
   })
   .onError(({ code, error, set }) => {
