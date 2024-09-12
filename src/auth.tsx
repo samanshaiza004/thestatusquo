@@ -1,9 +1,9 @@
 import Elysia, { redirect } from "elysia";
-import { html } from "@elysiajs/html";
+import { html, Html } from "@elysiajs/html";
 import { oauth2 } from "elysia-oauth2";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api";
-
+import { GitHubIcon } from "./icons/GitHubIcon";
 const client = new ConvexHttpClient(process.env.CONVEX_URL!);
 
 const authApp = new Elysia()
@@ -16,14 +16,25 @@ const authApp = new Elysia()
       ],
     })
   )
-  .get("/login", ({ html }) =>
-    html(
-      `<html>
+  .get("/login", () => {
+    return (
+      <html>
+        <head>
+          <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, shrink-to-fit=no"
+          />
+          <script src="https://cdn.tailwindcss.com"></script>
+        </head>
         <body>
-          <a href="/auth/github">Login with GitHub</a>
+        <div class="grid place-items-center h-screen">
+          <a class="relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white transition-all duration-200 bg-gray-900 font-pj rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900" href="/auth/github"><GitHubIcon /> Login with GitHub</a>
+        </div>
+         
         </body>
-      </html>`
-    )
+      </html>
+    
+    )}
   )
   .get("/auth/github", ({ oauth2 }) => {
     try {
