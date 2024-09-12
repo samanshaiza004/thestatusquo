@@ -41,38 +41,45 @@ const PostsDisplay = async () => {
 
 const Post = ({ post }: { post: any }) => {
   return (
-    <div class="border p-4 mb-4 rounded-lg bg-white">
-      <div class="flex justify-between">
-        <div class={"flex gap-2"}>
-          <h3 class="text-xl font-bold">{post.title}</h3>
+    <div class="border p-2 mb-4 bg-white">
+      <div class="flex justify-between flex-wrap">
+        <div class="flex flex-col sm:flex-row gap-2">
+          <h3 class="text-lg sm:text-xl font-bold">{post.title}</h3>
           {post.user ? (
-            <div class={"flex items-center gap-2"}>
-              <img src={post.user[0].avatar} class="w-5 h-5 rounded-full" />
-              <p>{post.user[0].username || "Unknown"}</p>
+            <div class="flex items-center gap-2">
+              <img
+                src={post.user[0].avatar}
+                class="w-10 h-10 sm:w-5 sm:h-5 rounded-full"
+              />
+              <p class="text-sm sm:text-base">
+                {post.user[0].username || "Unknown"}
+              </p>
             </div>
           ) : (
-            <p>Unable to load</p>
+            <p class="text-sm sm:text-base">Unable to load</p>
           )}
         </div>
-        <div class={"flex gap-2 items-center"}>
+        <div class="flex gap-2 items-center mt-2 sm:mt-0">
           <button
             hx-delete={`/api/deletePost/${post._id}`}
             hx-target="#posts"
             hx-swap="outerHTML"
             hx-confirm="Are you sure you want to delete this post?"
-            class="mt-2 bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+            class="bg-red-500 text-white px-2 py-1 hover:bg-red-600 text-sm sm:text-base"
           >
             Delete
           </button>
-          <span>{timeSince(new Date(post._creationTime))} ago</span>
+          <span class="text-xs sm:text-sm">
+            {timeSince(new Date(post._creationTime))} ago
+          </span>
         </div>
       </div>
-      <p>{post.content}</p>
+      <p class="text-sm sm:text-base">{post.content}</p>
       <div class="flex items-center gap-1">
-        <div class={"hover:bg-gray-100 cursor-pointer rounded-full"}>
+        <div class="hover:bg-gray-100 cursor-pointer rounded-full p-1">
           <LikeIcon />
         </div>
-        <span>{post.likes_count}</span>
+        <span class="text-sm sm:text-base">{post.likes_count}</span>
       </div>
     </div>
   );
@@ -100,7 +107,7 @@ const PostForm = async ({ cookie }: { cookie: any }) => {
         hx-post="/post"
         hx-target="#posts"
         hx-swap="outerHTML"
-        hx-on:after-request="this.reset()"
+        hx-on--after-request="this.reset()"
         class="space-y-2"
       >
         <input
@@ -108,17 +115,17 @@ const PostForm = async ({ cookie }: { cookie: any }) => {
           name="title"
           placeholder="Title"
           required
-          class="w-full p-2 border rounded"
+          class="w-full p-2 border text-sm sm:text-base"
         />
         <textarea
           name="content"
           placeholder="Content"
           required
-          class="w-full p-2 border rounded"
+          class="w-full p-2 border text-sm sm:text-base"
         ></textarea>
         <button
           type="submit"
-          class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+          class="w-full bg-blue-500 text-white p-2 hover:bg-blue-600 text-sm sm:text-base"
         >
           Submit
         </button>
@@ -140,6 +147,12 @@ const app = new Elysia()
       <html lang="en">
         <head>
           <title>The Status Quo</title>
+
+          <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, shrink-to-fit=no"
+          />
+
           <script src="https://cdn.tailwindcss.com"></script>
           <script
             src="https://unpkg.com/htmx.org@2.0.2"
@@ -148,14 +161,16 @@ const app = new Elysia()
           ></script>
         </head>
         <body class="flex flex-col h-screen bg-gray-100">
-          <header class="bg-white shadow-md p-4 flex justify-between items-center">
-            <h1 class="text-3xl font-bold">The Status Quo</h1>
+          <header class="bg-white shadow-md p-4 flex justify-between items-center flex-wrap">
+            <h1 class="text-2xl sm:text-3xl font-bold">The Status Quo</h1>
             {user ? (
-              <div class="flex items-center">
-                <span class="mr-4">Welcome, {user.username}</span>
+              <div class="flex items-center space-x-4 mt-2 sm:mt-0">
+                <span class="text-sm sm:text-base">
+                  Welcome, {user.username}
+                </span>
                 <a
                   href="/signout"
-                  class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                  class="bg-red-500 text-white px-3 py-1 hover:bg-red-600 text-sm sm:text-base"
                 >
                   Sign Out
                 </a>
@@ -163,18 +178,18 @@ const app = new Elysia()
             ) : (
               <a
                 href="/login"
-                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                class="bg-blue-500 text-white px-3 py-1 hover:bg-blue-600 text-sm sm:text-base"
               >
                 Log In
               </a>
             )}
           </header>
-          <main class="flex-grow flex flex-col overflow-hidden p-4">
+          <main class="flex-grow flex flex-col overflow-hidden p-2">
             <div id="posts" class="flex-grow overflow-y-auto mb-4">
               <h2 class="text-2xl font-semibold mb-2">Posts</h2>
               {await PostsDisplay()}
             </div>
-            <div class="bg-white p-4 rounded-lg shadow-md">
+            <div class="bg-white p-2 shadow-md">
               <PostForm cookie={cookie} />
             </div>
           </main>
