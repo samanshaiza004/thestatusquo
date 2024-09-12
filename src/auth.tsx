@@ -98,7 +98,6 @@ const authApp = new Elysia()
       return "Authentication failed due to an unknown error";
     }
   })
-  
   .get("/signout", ({ cookie, redirect }) => {
     cookie.userId.remove();
     cookie.tokenIdentifier.remove();

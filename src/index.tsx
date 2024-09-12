@@ -12,11 +12,12 @@ import { TrashIcon } from "./icons/TrashIcon";
 const client = new ConvexHttpClient(process.env.CONVEX_URL!);
 
 const PostsDisplay = async ({ cookie }: {cookie: any}) => {
+  
   const userId = cookie.userId.value as Id<"users"> | undefined;
-  const user = userId
+  let user = userId
     ? await client.query(api.tasks.getCurrentUser, { userId })
     : null;
-
+  
   try {
     const posts = await client.query(api.tasks.getPosts);
     const postsWithUsers = await Promise.all(
@@ -46,10 +47,10 @@ const PostsDisplay = async ({ cookie }: {cookie: any}) => {
   }
 };
 
-const Post = ({ post, user }: { post: any, user: any }) => {
+const Post = ({ post, user }: { post: any, user: any | undefined }) => {
   
   return (
-    <div class="border p-2 mb-4 bg-white">
+    <div class="border p-2 mb-2 bg-white">
       <div class="flex justify-between flex-wrap">
         <div class="flex flex-col sm:flex-row gap-2">
           <h3 class="text-lg sm:text-xl font-bold">{post.title}</h3>
@@ -68,7 +69,7 @@ const Post = ({ post, user }: { post: any, user: any }) => {
           )}
         </div>
         <div class="flex gap-2 items-center mt-2 sm:mt-0">
-          {post?.userId === user._id ? <button
+          {user && post?.userId === user._id ? <button
             hx-delete={`/api/deletePost/${post._id}`}
             hx-target="#posts"
             hx-swap="outerHTML"
@@ -85,10 +86,10 @@ const Post = ({ post, user }: { post: any, user: any }) => {
           </span>
         </div>
       </div>
-      <p class="text-sm sm:text-base">{post.content}</p>
+      <p class="text-sm sm:text-base mb-2">{post.content}</p>
       <div class="flex items-center gap-1">
         <div hx-patch={`/api/likePost/${post._id}`} hx-target="#posts" class="hover:bg-gray-100 hover:fill-rose-500 cursor-pointer rounded-full p-1">
-          {user.liked_posts.includes(post._id) ? <FilledLikeIcon /> : <LikeIcon />}
+          {user && user.liked_posts.includes(post._id) ? <FilledLikeIcon /> : <LikeIcon />}
 
         </div>
         <span id={"like-count"} class="text-sm sm:text-base">{post.likes_count}</span>
@@ -174,7 +175,7 @@ const app = new Elysia()
         </head>
         <body class="flex flex-col h-screen bg-gray-100">
           <header class="bg-white shadow-md p-4 flex justify-between items-center flex-wrap">
-            <h1 class="text-2xl sm:text-3xl font-bold">The Status Quo</h1>
+            <h1 class="text-3xl sm:text-2xl font-bold">The Status Quo</h1>
             {user ? (
               <div class="flex items-center space-x-4 mt-2 sm:mt-0">
                 <span class="text-sm sm:text-base">
@@ -198,7 +199,7 @@ const app = new Elysia()
           </header>
           <main class="flex-grow flex flex-col overflow-hidden p-2">
             <div id="posts" class="flex-grow overflow-y-auto mb-4">
-            {await PostsDisplay({ cookie })}
+              {await PostsDisplay({ cookie })}
             </div>
             <div class="bg-white p-2 shadow-md">
               <PostForm cookie={cookie} />
