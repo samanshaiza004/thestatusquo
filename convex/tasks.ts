@@ -5,17 +5,20 @@ import { v } from "convex/values";
 export const getPosts = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("posts").collect();
+    return await ctx.db
+      .query("posts")
+      .order("desc")
+      .collect();
   },
 });
+
 
 export const getUserById = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
-    return await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("_id"), userId))
-      .collect();
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("User not found");
+    return user;
   },
 });
 
@@ -25,6 +28,7 @@ export const postPost = mutation({
     content: v.string(),
     userId: v.id("users"),
   },
+  
   handler: async (ctx, { title, content, userId }) => {
     const user = await ctx.db.get(userId);
     if (!user) {
@@ -42,7 +46,9 @@ export const postPost = mutation({
 export const getCurrentUser = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
-    return await ctx.db.get(userId);
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("User not found");
+    return user;
   },
 });
 
@@ -79,19 +85,21 @@ export const createUser = mutation({
 export const getUserByToken = query({
   args: { tokenIdentifier: v.string() },
   handler: async (ctx, { tokenIdentifier }) => {
-    return await ctx.db
+    const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", tokenIdentifier))
       .first();
+    if (!user) throw new Error("User not found");
+    return user;
   },
 });
 
 export const getPostById = query({
   args: { postId: v.id("posts") },
   handler: async (ctx, { postId }) => {
-    return await ctx.db
-      .query("posts")
-      .filter((q) => q.eq(q.field("_id"), postId));
+    const post = await ctx.db.get(postId);
+    if (!post) throw new Error("Post not found");
+    return post;
   },
 });
 
@@ -99,14 +107,16 @@ export const deletePostById = mutation({
   args: { postId: v.id("posts"), userId: v.id("users") },
   handler: async (ctx, { postId, userId }) => {
     const post = await ctx.db.get(postId);
-    if (!post) throw new Error("No post with _id " + postId + " exists");
+    if (!post) throw new Error("Post not found");
+
     if (post.userId !== userId) {
       throw new Error("You are not authorized to delete this post");
     }
 
     await ctx.db.delete(postId);
 
-    return "Post deleted successfully";
+    return { success: true, message: "Post deleted successfully" };
+
   },
 });
 
@@ -116,46 +126,40 @@ export const modifyLikeToPost = mutation({
     userId: v.id("users"),
   },
   handler: async (ctx, { postId, userId }) => {
-    // Fetch the post and user from the database
-    const post = await ctx.db.get(postId);
-    if (!post) throw new Error("No post with _id " + postId + " exists");
-
-    const user = await ctx.db.get(userId);
-    if (!user) throw new Error("You are not authorized to like this post");
-
-
-    if (user.liked_posts.includes(postId)) {
-
-      const idx = user.liked_posts.indexOf(post._id);
-      user.liked_posts.splice(idx, 1);
-
-      // Update the user's liked_posts in the database
-      await ctx.db.patch(userId, {
-        liked_posts: user.liked_posts,
-      });
-
-
-      await ctx.db.patch(postId, {
-        likes_count: post.likes_count - 1,
-      });
-
-      console.log("Post unliked by user");
-    } else {
-
-      user.liked_posts.push(postId);
-
-      await ctx.db.patch(userId, {
-        liked_posts: user.liked_posts,
-      });
-
-      await ctx.db.patch(postId, {
-        likes_count: post.likes_count + 1,
-      });
-
-      console.log("Post liked by user");
+    try {
+      const post = await ctx.db.get(postId);
+      if (!post) throw new Error("Post not found");
+  
+      const user = await ctx.db.get(userId);
+      if (!user) throw new Error("User not found");
+  
+      let likedPosts = user.liked_posts || [];
+      let likesCount = post.likes_count || 0;
+      let action = "";
+  
+      if (likedPosts.includes(postId)) {
+  
+        likedPosts = likedPosts.filter((id) => id !== postId);
+        likesCount = Math.max(0, likesCount - 1);
+        action = "unliked";
+      } else {
+  
+        likedPosts.push(postId);
+        likesCount += 1;
+        action = "liked";
+      }
+  
+      await ctx.db.patch(userId, { liked_posts: likedPosts });
+  
+      await ctx.db.patch(postId, { likes_count: likesCount });
+  
+      console.log(`Post ${action} by user`);
+  
+      const updatedPost = await ctx.db.get(postId);
+      return updatedPost;
+    } catch (err) {
+      console.error(err);
     }
-
-    const updatedPost = await ctx.db.get(postId);
-    return updatedPost?.likes_count;
+    
   },
 });

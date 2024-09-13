@@ -11,34 +11,34 @@ import { TrashIcon } from "./icons/TrashIcon";
 
 const client = new ConvexHttpClient(process.env.CONVEX_URL!);
 
-const PostsDisplay = async ({ cookie }: {cookie: any}) => {
-  
+const PostsDisplay = async ({ cookie }: { cookie: any }) => {
   const userId = cookie.userId.value as Id<"users"> | undefined;
-  let user = userId
+  const user = userId
     ? await client.query(api.tasks.getCurrentUser, { userId })
     : null;
-  
+
   try {
     const posts = await client.query(api.tasks.getPosts);
+
     const postsWithUsers = await Promise.all(
       posts.map(async (post: any) => {
         try {
-          const user = await client.query(api.tasks.getUserById, {
+          const postUser = await client.query(api.tasks.getUserById, {
             userId: post.userId,
           });
-          return { ...post, user };
+          return { ...post, user: postUser } // Assuming postUser is an array
         } catch (error) {
           console.error(`Failed to fetch user for post ${post._id}:`, error);
           return { ...post, user: null };
         }
       })
     );
+
     return (
       <div class="overflow-y-auto h-full">
-        {postsWithUsers.map(async (post: any) => (
+        {postsWithUsers.map((post: any) => (
           <Post key={post._id} post={post} user={user} />
-        )
-        )}
+        ))}
       </div>
     );
   } catch (error) {
@@ -47,9 +47,10 @@ const PostsDisplay = async ({ cookie }: {cookie: any}) => {
   }
 };
 
+
 const PostFullPage = ({ post, user }: { post: any, user: any | undefined}) => {
   return (
-    <div class="border p-2 mb-2 bg-white">
+    <div id={post._id} class="border p-2 mb-2 bg-white">
       <div class="flex justify-between flex-wrap">
         <div class="flex flex-col sm:flex-row gap-2">
           <h3 class="text-lg sm:text-xl font-bold">{post.title}</h3>
@@ -60,7 +61,7 @@ const PostFullPage = ({ post, user }: { post: any, user: any | undefined}) => {
                 class="w-10 h-10 sm:w-5 sm:h-5 rounded-full"
               />
               <p class="text-sm sm:text-base">
-                {post.user[0].username || "Unknown"}
+                {post.user.username || "Unknown"}
               </p>
             </div>
           ) : (
@@ -71,7 +72,6 @@ const PostFullPage = ({ post, user }: { post: any, user: any | undefined}) => {
           {user && post?.userId === user._id ? <button
             hx-delete={`/api/deletePost/${post._id}`}
             hx-target="#posts"
-            hx-swap="outerHTML"
             hx-confirm="Are you sure you want to delete this post?"
             class="bg-rose-400 text-white px-2 py-1 hover:bg-red-500 text-sm sm:text-base"
           >
@@ -87,7 +87,7 @@ const PostFullPage = ({ post, user }: { post: any, user: any | undefined}) => {
       </div>
       <p class="text-sm sm:text-base mb-2">{post.content}</p>
       <div class="flex items-center gap-1">
-        <div hx-patch={`/api/likePost/${post._id}`} hx-target="#posts" class="hover:bg-gray-100 hover:fill-rose-500 cursor-pointer rounded-full p-1">
+        <div hx-patch={`/api/likePost/${post._id}`} hx-target={post._id} class="hover:bg-gray-100 hover:fill-rose-500 cursor-pointer rounded-full p-1">
           {user && user.liked_posts.includes(post._id) ? <FilledLikeIcon /> : <LikeIcon />}
 
         </div>
@@ -97,21 +97,20 @@ const PostFullPage = ({ post, user }: { post: any, user: any | undefined}) => {
   );
 }
 
-const Post = ({ post, user }: { post: any, user: any | undefined }) => {
-  
+const Post = ({ post, user }: { post: any; user: any | undefined }) => {
   return (
-    <div class="border p-2 mb-2 bg-white">
+    <div id={post._id} class="border p-2 mb-2 bg-white">
       <div class="flex justify-between flex-wrap">
         <div class="flex flex-col sm:flex-row gap-2">
           <h3 class="text-lg sm:text-xl font-bold">{post.title}</h3>
           {post.user ? (
             <div class="flex items-center gap-2">
               <img
-                src={post.user[0].avatar}
+                src={post.user.avatar}
                 class="w-10 h-10 sm:w-5 sm:h-5 rounded-full"
               />
               <p class="text-sm sm:text-base">
-                {post.user[0].username || "Unknown"}
+                {post.user.username || "Unknown"}
               </p>
             </div>
           ) : (
@@ -119,18 +118,17 @@ const Post = ({ post, user }: { post: any, user: any | undefined }) => {
           )}
         </div>
         <div class="flex gap-2 items-center mt-2 sm:mt-0">
-          {user && post?.userId === user._id ? <button
-            hx-delete={`/api/deletePost/${post._id}`}
-            hx-target="#posts"
-            hx-swap="outerHTML"
-            hx-confirm="Are you sure you want to delete this post?"
-            class="bg-rose-400 text-white px-2 py-1 hover:bg-red-500 text-sm sm:text-base"
-          >
-            <TrashIcon />
-          </button>
-          : null
-          }
-          
+          {user && post.userId === user._id ? (
+            <button
+              hx-delete={`/api/deletePost/${post._id}`}
+              hx-target="#posts"
+              hx-swap="innerHTML"
+              hx-confirm="Are you sure you want to delete this post?"
+              class="bg-rose-400 text-white px-2 py-1 hover:bg-red-500 text-sm sm:text-base"
+            >
+              <TrashIcon />
+            </button>
+          ) : null}
           <span class="text-xs sm:text-sm">
             {timeSince(new Date(post._creationTime))} ago
           </span>
@@ -138,15 +136,26 @@ const Post = ({ post, user }: { post: any, user: any | undefined }) => {
       </div>
       <p class="text-sm sm:text-base mb-2">{post.content}</p>
       <div class="flex items-center gap-1">
-        <div hx-patch={`/api/likePost/${post._id}`} hx-target="#posts" class="hover:bg-gray-100 hover:fill-rose-500 cursor-pointer rounded-full p-1">
-          {user && user.liked_posts.includes(post._id) ? <FilledLikeIcon /> : <LikeIcon />}
-
+        <div
+          hx-patch={`/api/likePost/${post._id}`}
+          hx-target={`#${post._id}`}
+          hx-swap="outerHTML"
+          class="hover:bg-gray-100 hover:fill-rose-500 cursor-pointer rounded-full p-1"
+        >
+          {user && user.liked_posts.includes(post._id) ? (
+            <FilledLikeIcon />
+          ) : (
+            <LikeIcon />
+          )}
         </div>
-        <span id={"like-count"} class="text-sm sm:text-base">{post.likes_count}</span>
+        <span id="like-count" class="text-sm sm:text-base">
+          {post.likes_count}
+        </span>
       </div>
     </div>
   );
 };
+
 
 const PostForm = async ({ cookie }: { cookie: any }) => {
   const userId = cookie.userId.value as Id<"users"> | undefined;
@@ -169,7 +178,7 @@ const PostForm = async ({ cookie }: { cookie: any }) => {
       <form
         hx-post="/post"
         hx-target="#posts"
-        hx-swap="outerHTML"
+        hx-swap="innerHTML"
         hx-on--after-request="this.reset()"
         class="space-y-2"
       >
@@ -308,29 +317,74 @@ const app = new Elysia()
       if (!userId) {
         throw new Error("User not authenticated");
       }
-
+  
       const postId = params.postId as Id<"posts">;
-      await client.mutation(api.tasks.modifyLikeToPost, { postId, userId })
-      return await PostsDisplay({ cookie })
+  
+      // Perform the like/unlike mutation
+      await client.mutation(api.tasks.modifyLikeToPost, { postId, userId });
+  
+      // Fetch the updated post and user data
+      const postData = await client.query(api.tasks.getPostById, { postId });
+      const postUser = await client.query(api.tasks.getUserById, { userId: postData.userId });
+      const user = await client.query(api.tasks.getCurrentUser, { userId });
+  
+      // Prepare the post data with user information
+      const postWithUser = { ...postData, user: postUser }; // Assuming postUser is an array
+  
+      // Return the updated Post component
+      return Post({ post: postWithUser, user });
     } catch (error: any) {
-      alert(error.message);
-      return await PostsDisplay({ cookie })
+      console.error("Error in likePost route:", error);
+      return `<div>Error updating post. Please try again. ${error}</div>`;
     }
   })
   .get("/posts/:postId", async ({ cookie, params }) => {
     try {
       const userId = cookie.userId.value as Id<"users"> | undefined;
-    const user = userId
-    ? await client.query(api.tasks.getCurrentUser, { userId })
-    : null;
-
-      let postId = params.postId as Id<"posts">
-      const post = client.query(api.tasks.getPostById, { postId })
-      return PostFullPage({post, user});
-    } catch (error) {
-
+      const user = userId
+        ? await client.query(api.tasks.getCurrentUser, { userId })
+        : null;
+  
+      const postId = params.postId as Id<"posts">;
+      const postData = await client.query(api.tasks.getPostById, { postId });
+      if (!postData) {
+        throw new Error("Post not found");
+      }
+  
+      const postUser = await client.query(api.tasks.getUserById, {
+        userId: postData.userId,
+      });
+  
+      const postWithUser = { ...postData, user: postUser };
+  
+      return (
+        <html lang="en">
+          <head>
+            <title>{postWithUser.title} - The Status Quo</title>
+            <meta
+              name="viewport"
+              content="width=device-width, initial-scale=1, shrink-to-fit=no"
+            />
+            <script src="https://cdn.tailwindcss.com"></script>
+            <script
+              src="https://unpkg.com/htmx.org@2.0.2"
+              integrity="sha384-Y7hw+L/jvKeWIRRkqWYfPcvVxHzVzn5REgzbawhxAuQGwX1XWe70vji+VSeHOThJ"
+            ></script>
+          </head>
+          <body class="flex flex-col h-screen bg-gray-100">
+            {/* Include your header here */}
+            <main class="flex-grow flex flex-col overflow-hidden p-2">
+              {PostFullPage({ post: postWithUser, user })}
+            </main>
+          </body>
+        </html>
+      );
+    } catch (error: any) {
+      console.error("Error fetching post:", error);
+      return `<div>Error loading post. Please try again later.</div>`;
     }
   })
+  
   .onError(({ code, error, set }) => {
     console.error(`${code} error:`, error);
     set.status = code === "NOT_FOUND" ? 404 : 500;
