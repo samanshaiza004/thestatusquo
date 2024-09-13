@@ -55,9 +55,10 @@ const PostFullPage = ({ post, user }: { post: any, user: any | undefined}) => {
         <div class="flex flex-col sm:flex-row gap-2">
           <h3 class="text-lg sm:text-xl font-bold">{post.title}</h3>
           {post.user ? (
-            <div class="flex items-center gap-2">
+            <div onclick="event.stopPropagation()" class="flex items-center gap-2">
               <img
-                src={post.user[0].avatar}
+                src={post.user.avatar}
+                
                 class="w-10 h-10 sm:w-5 sm:h-5 rounded-full"
               />
               <p class="text-sm sm:text-base">
@@ -74,6 +75,7 @@ const PostFullPage = ({ post, user }: { post: any, user: any | undefined}) => {
             hx-target="#posts"
             hx-confirm="Are you sure you want to delete this post?"
             class="bg-rose-400 text-white px-2 py-1 hover:bg-red-500 text-sm sm:text-base"
+            onclick="event.stopPropagation()"
           >
             <TrashIcon />
           </button>
@@ -87,9 +89,18 @@ const PostFullPage = ({ post, user }: { post: any, user: any | undefined}) => {
       </div>
       <p class="text-sm sm:text-base mb-2">{post.content}</p>
       <div class="flex items-center gap-1">
-        <div hx-patch={`/api/likePost/${post._id}`} hx-target={post._id} class="hover:bg-gray-100 hover:fill-rose-500 cursor-pointer rounded-full p-1">
-          {user && user.liked_posts.includes(post._id) ? <FilledLikeIcon /> : <LikeIcon />}
-
+      <div
+          hx-patch={`/api/likePost/${post._id}`}
+          hx-target={`#${post._id}`}
+          hx-swap="outerHTML"
+          class="hover:bg-gray-100 hover:fill-rose-500 cursor-pointer rounded-full p-1"
+           onclick="event.stopPropagation()"
+        >
+          {user && user.liked_posts.includes(post._id) ? (
+            <FilledLikeIcon />
+          ) : (
+            <LikeIcon />
+          )}
         </div>
         <span id={"like-count"} class="text-sm sm:text-base">{post.likes_count}</span>
       </div>
@@ -99,14 +110,18 @@ const PostFullPage = ({ post, user }: { post: any, user: any | undefined}) => {
 
 const Post = ({ post, user }: { post: any; user: any | undefined }) => {
   return (
-    <div id={post._id} class="border p-2 mb-2 bg-white">
+    <div hx-get={`/posts/${post._id}`}
+    hx-push-url="true"
+    hx-target="body"
+    hx-swap="outerHTML" id={post._id} class="border p-2 mb-2 bg-white">
       <div class="flex justify-between flex-wrap">
         <div class="flex flex-col sm:flex-row gap-2">
           <h3 class="text-lg sm:text-xl font-bold">{post.title}</h3>
           {post.user ? (
-            <div class="flex items-center gap-2">
+            <div onclick="event.stopPropagation()" class="flex items-center gap-2">
               <img
                 src={post.user.avatar}
+                
                 class="w-10 h-10 sm:w-5 sm:h-5 rounded-full"
               />
               <p class="text-sm sm:text-base">
@@ -118,17 +133,18 @@ const Post = ({ post, user }: { post: any; user: any | undefined }) => {
           )}
         </div>
         <div class="flex gap-2 items-center mt-2 sm:mt-0">
-          {user && post.userId === user._id ? (
-            <button
-              hx-delete={`/api/deletePost/${post._id}`}
-              hx-target="#posts"
-              hx-swap="innerHTML"
-              hx-confirm="Are you sure you want to delete this post?"
-              class="bg-rose-400 text-white px-2 py-1 hover:bg-red-500 text-sm sm:text-base"
-            >
-              <TrashIcon />
-            </button>
-          ) : null}
+          {user && post?.userId === user._id ? <button
+            hx-delete={`/api/deletePost/${post._id}`}
+            hx-target="#posts"
+            hx-confirm="Are you sure you want to delete this post?"
+            class="bg-rose-400 text-white px-2 py-1 hover:bg-red-500 text-sm sm:text-base"
+            onclick="event.stopPropagation()"
+          >
+            <TrashIcon />
+          </button>
+          : null
+          }
+          
           <span class="text-xs sm:text-sm">
             {timeSince(new Date(post._creationTime))} ago
           </span>
@@ -136,11 +152,12 @@ const Post = ({ post, user }: { post: any; user: any | undefined }) => {
       </div>
       <p class="text-sm sm:text-base mb-2">{post.content}</p>
       <div class="flex items-center gap-1">
-        <div
+      <div
           hx-patch={`/api/likePost/${post._id}`}
           hx-target={`#${post._id}`}
           hx-swap="outerHTML"
           class="hover:bg-gray-100 hover:fill-rose-500 cursor-pointer rounded-full p-1"
+           onclick="event.stopPropagation()"
         >
           {user && user.liked_posts.includes(post._id) ? (
             <FilledLikeIcon />
@@ -148,9 +165,7 @@ const Post = ({ post, user }: { post: any; user: any | undefined }) => {
             <LikeIcon />
           )}
         </div>
-        <span id="like-count" class="text-sm sm:text-base">
-          {post.likes_count}
-        </span>
+        <span id={"like-count"} class="text-sm sm:text-base">{post.likes_count}</span>
       </div>
     </div>
   );
@@ -328,8 +343,7 @@ const app = new Elysia()
       const postUser = await client.query(api.tasks.getUserById, { userId: postData.userId });
       const user = await client.query(api.tasks.getCurrentUser, { userId });
   
-      // Prepare the post data with user information
-      const postWithUser = { ...postData, user: postUser }; // Assuming postUser is an array
+      const postWithUser = { ...postData, user: postUser };
   
       // Return the updated Post component
       return Post({ post: postWithUser, user });
@@ -361,14 +375,15 @@ const app = new Elysia()
         <html lang="en">
           <head>
             <title>{postWithUser.title} - The Status Quo</title>
-            <meta
-              name="viewport"
-              content="width=device-width, initial-scale=1, shrink-to-fit=no"
-            />
+            <script
+            src="https://unpkg.com/htmx.org@2.0.2"
+            integrity="sha384-Y7hw+L/jvKeWIRRkqWYfPcvVxHzVzn5REgzbawhxAuQGwX1XWe70vji+VSeHOThJ"
+            crossorigin="anonymous"
+          ></script>
             <script src="https://cdn.tailwindcss.com"></script>
             <script
               src="https://unpkg.com/htmx.org@2.0.2"
-              integrity="sha384-Y7hw+L/jvKeWIRRkqWYfPcvVxHzVzn5REgzbawhxAuQGwX1XWe70vji+VSeHOThJ"
+
             ></script>
           </head>
           <body class="flex flex-col h-screen bg-gray-100">
