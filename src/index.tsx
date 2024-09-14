@@ -8,6 +8,7 @@ import authApp from "./auth";
 
 import { LikeIcon, FilledLikeIcon } from "./icons/LikeIcons";
 import { TrashIcon } from "./icons/TrashIcon";
+import DOMPurify from "isomorphic-dompurify";
 
 const client = new ConvexHttpClient(process.env.CONVEX_URL!);
 
@@ -53,7 +54,7 @@ const PostFullPage = ({ post, user }: { post: any, user: any | undefined}) => {
     <div id={post._id} class="border p-2 mb-2 bg-white">
       <div class="flex justify-between flex-wrap">
         <div class="flex flex-col sm:flex-row gap-2">
-          <h3 class="text-lg sm:text-xl font-bold">{post.title}</h3>
+          <h3 class="text-3xl sm:text-2xl font-bold">{post.title}</h3>
           {post.user ? (
             <div onclick="event.stopPropagation()" class="flex items-center gap-2">
               <img
@@ -113,7 +114,7 @@ const Post = ({ post, user }: { post: any; user: any | undefined }) => {
     <div hx-get={`/posts/${post._id}`}
     hx-push-url="true"
     hx-target="body"
-    hx-swap="outerHTML" id={post._id} class="border p-2 mb-2 bg-white">
+    hx-swap="outerHTML" id={post._id} class="border p-2 mb-2 bg-white cursor-pointer">
       <div class="flex justify-between flex-wrap">
         <div class="flex flex-col sm:flex-row gap-2">
           <h3 class="text-lg sm:text-xl font-bold">{post.title}</h3>
@@ -286,13 +287,15 @@ const app = new Elysia()
   .post("/post", async ({ body, cookie }) => {
     try {
       const { title, content } = body as { title: string; content: string };
+      const newTitle = DOMPurify.sanitize(title)
+      const newContent = DOMPurify.sanitize(content)
       const userId = cookie.userId.value as Id<"users"> | undefined;
       if (!userId) {
         throw new Error("User not authenticated");
       }
       await client.mutation(api.tasks.postPost, {
-        title,
-        content,
+        title: newTitle,
+        content: newContent,
         userId,
       });
       return await PostsDisplay({ cookie })
@@ -381,10 +384,6 @@ const app = new Elysia()
             crossorigin="anonymous"
           ></script>
             <script src="https://cdn.tailwindcss.com"></script>
-            <script
-              src="https://unpkg.com/htmx.org@2.0.2"
-
-            ></script>
           </head>
           <body class="flex flex-col h-screen bg-gray-100">
             {/* Include your header here */}
