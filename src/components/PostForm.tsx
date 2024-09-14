@@ -20,7 +20,7 @@ const PostForm = async ({ cookie }: { cookie: any }) => {
     );
   }
   return (
-    <div>
+    <div class="md:w-10/12 sm:w-full">
       <form
         hx-post="/post"
         hx-target="#posts"

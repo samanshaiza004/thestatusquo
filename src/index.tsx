@@ -27,12 +27,10 @@ const app = new Elysia()
       <html id="root" lang="en">
         <head>
           <title>The Status Quo</title>
-
           <meta
             name="viewport"
             content="width=device-width, initial-scale=1, shrink-to-fit=no"
           />
-
           <script src="https://cdn.tailwindcss.com"></script>
           <script
             src="https://unpkg.com/htmx.org@2.0.2"
@@ -43,10 +41,10 @@ const app = new Elysia()
         <body class="flex flex-col h-screen bg-gray-100">
           <Header user={user} />
           <main class="flex-grow flex flex-col overflow-hidden p-2">
-            <div id="posts" class="flex-grow overflow-y-auto mb-4">
+            <div id="posts" class="flex justify-center overflow-y-auto mb-4">
               {await PostsDisplay({ cookie })}
             </div>
-            <div class="bg-white p-2 shadow-md">
+            <div class="bg-white p-2 shadow-md flex justify-center">
               <PostForm cookie={cookie} />
             </div>
           </main>

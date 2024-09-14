@@ -29,7 +29,7 @@ const PostsDisplay = async ({ cookie }: { cookie: any }) => {
     );
 
     return (
-      <div class="overflow-y-auto h-full">
+      <div class="overflow-y-auto w-10/12 h-full">
         {postsWithUsers.map((post: any) => (
           <Post key={post._id} post={post} user={user} />
         ))}

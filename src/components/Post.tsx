@@ -10,7 +10,7 @@ export const PostFullPage = ({
   user: any | undefined;
 }) => {
   return (
-    <div id={post._id} class="w-10/12 border p-2 mb-2 bg-white">
+    <div id={post._id} class="w-10/12 h-screen border p-2 mb-2 bg-white">
       <div class="flex justify-between flex-wrap">
         <div class="flex flex-col sm:flex-row gap-2">
           <h3 class="text-3xl sm:text-2xl font-bold">{post.title}</h3>
@@ -51,19 +51,24 @@ export const PostFullPage = ({
       </div>
       <p class="text-sm sm:text-base mb-2">{post.content}</p>
       <div class="flex items-center gap-1">
-        <div
-          hx-patch={`/api/likePost/${post._id}`}
-          hx-target={`#${post._id}`}
-          hx-swap="outerHTML"
-          class="hover:bg-gray-100 hover:fill-rose-500 cursor-pointer rounded-full p-1"
-          onclick="event.stopPropagation()"
-        >
-          {user && user.liked_posts.includes(post._id) ? (
-            <FilledLikeIcon />
-          ) : (
-            <LikeIcon />
-          )}
-        </div>
+        {user ? (
+          <div
+            hx-patch={`/api/likePost/${post._id}`}
+            hx-target={`#${post._id}`}
+            hx-swap="outerHTML"
+            class="hover:bg-gray-100 hover:fill-rose-500 cursor-pointer rounded-full p-1"
+            onclick="event.stopPropagation()"
+          >
+            {user.liked_posts.includes(post._id) ? (
+              <FilledLikeIcon />
+            ) : (
+              <LikeIcon />
+            )}
+          </div>
+        ) : (
+          <LikeIcon />
+        )}
+
         <span id={"like-count"} class="text-sm sm:text-base">
           {post.likes_count}
         </span>
@@ -122,19 +127,25 @@ const Post = ({ post, user }: { post: any; user: any | undefined }) => {
       </div>
       <p class="text-sm sm:text-base mb-2">{post.content}</p>
       <div class="flex items-center gap-1">
-        <div
-          hx-patch={`/api/likePost/${post._id}`}
-          hx-target={`#${post._id}`}
-          hx-swap="outerHTML"
-          class="hover:bg-gray-100 hover:fill-rose-500 cursor-pointer rounded-full p-1"
-          onclick="event.stopPropagation()"
-        >
-          {user && user.liked_posts.includes(post._id) ? (
-            <FilledLikeIcon />
-          ) : (
+        {user ? (
+          <div
+            hx-patch={`/api/likePost/${post._id}`}
+            hx-target={`#${post._id}`}
+            hx-swap="outerHTML"
+            class="hover:bg-gray-100 hover:fill-rose-500 cursor-pointer rounded-full p-1"
+            onclick="event.stopPropagation()"
+          >
+            {user.liked_posts.includes(post._id) ? (
+              <FilledLikeIcon />
+            ) : (
+              <LikeIcon />
+            )}
+          </div>
+        ) : (
+          <div class="rounded-full p-1">
             <LikeIcon />
-          )}
-        </div>
+          </div>
+        )}
         <span id={"like-count"} class="text-sm sm:text-base">
           {post.likes_count}
         </span>
