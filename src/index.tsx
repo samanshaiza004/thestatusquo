@@ -10,6 +10,7 @@ import Post, { PostFullPage } from "./components/Post";
 import PostsDisplay from "./components/PostsDisplay";
 import PostForm from "./components/PostForm";
 import Header from "./components/Header";
+import UserProfilePage from "./components/UserProfilePage";
 
 export const client = new ConvexHttpClient(process.env.CONVEX_URL!);
 
@@ -164,6 +165,44 @@ const app = new Elysia()
             <main>
               <div class="flex justify-center overflow-hidden p-2" id="posts">
                 {PostFullPage({ post: postWithUser, user })}
+              </div>
+            </main>
+          </body>
+        </html>
+      );
+    } catch (error: any) {
+      console.error("Error fetching post:", error);
+      return `<div>Error loading post. Please try again later.</div>`;
+    }
+  })
+  .get("/users/:userId", async ({ cookie, params }) => {
+    try {
+      const userId = cookie.userId.value as Id<"users"> | undefined;
+      const currentUser = userId
+        ? await client.query(api.tasks.getCurrentUser, { userId })
+        : null;
+      const newUserId = params.userId as Id<"users">;
+      const user = await client.query(api.tasks.getUserById, {
+        userId: newUserId,
+      });
+
+      return (
+        <html id="root" lang="en">
+          <head>
+            <title>{user?.username} - The Status Quo</title>
+            <script
+              src="https://unpkg.com/htmx.org@2.0.2"
+              integrity="sha384-Y7hw+L/jvKeWIRRkqWYfPcvVxHzVzn5REgzbawhxAuQGwX1XWe70vji+VSeHOThJ"
+              crossorigin="anonymous"
+            ></script>
+            <script src="https://cdn.tailwindcss.com"></script>
+          </head>
+          <Header user={user} />
+          <body class="flex flex-col h-screen bg-gray-100">
+            {/* Include your header here */}
+            <main>
+              <div class="flex justify-center overflow-hidden p-2" id="posts">
+                {UserProfilePage({ currentUser, user })}
               </div>
             </main>
           </body>

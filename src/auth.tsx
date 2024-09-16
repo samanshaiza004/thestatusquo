@@ -27,15 +27,18 @@ const authApp = new Elysia()
           <script src="https://cdn.tailwindcss.com"></script>
         </head>
         <body>
-        <div class="grid place-items-center h-screen">
-          <a class="relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white transition-all duration-200 bg-gray-900 font-pj rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900" href="/auth/github"><GitHubIcon /> Login with GitHub</a>
-        </div>
-         
+          <div class="grid place-items-center h-screen">
+            <a
+              class="relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white transition-all duration-200 bg-gray-900 font-pj rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900"
+              href="/auth/github"
+            >
+              <GitHubIcon /> Login with GitHub
+            </a>
+          </div>
         </body>
       </html>
-    
-    )}
-  )
+    );
+  })
   .get("/auth/github", ({ oauth2 }) => {
     try {
       return oauth2.redirect("GitHub");
@@ -80,8 +83,6 @@ const authApp = new Elysia()
       cookie.userId.set({
         value: userId,
         httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
         maxAge: 60 * 60 * 24 * 7, // 1 week
       });
 

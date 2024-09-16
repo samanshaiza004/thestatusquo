@@ -13,11 +13,15 @@ export const PostFullPage = ({
     <div id={post._id} class="w-10/12 h-screen border p-2 mb-2 bg-white">
       <div class="flex justify-between flex-wrap">
         <div class="flex flex-col sm:flex-row gap-2">
-          <h3 class="text-3xl sm:text-2xl font-bold">{post.title}</h3>
+          <h3 class="text-9xl sm:text-4xl font-bold mb-3">{post.title}</h3>
           {post.user ? (
             <div
               onclick="event.stopPropagation()"
-              class="flex items-center gap-2"
+              hx-get={`/users/${user._id}`}
+              hx-push-url="true"
+              hx-target="body"
+              hx-swap="outerHTML"
+              class="flex cursor-pointer items-center gap-2 hover:underline"
             >
               <img
                 src={post.user.avatar}
@@ -49,7 +53,7 @@ export const PostFullPage = ({
           </span>
         </div>
       </div>
-      <p class="text-sm sm:text-base mb-2">{post.content}</p>
+      <p class="text-sm sm:text-base mb-6">{post.content}</p>
       <div class="flex items-center gap-1">
         {user ? (
           <div
@@ -85,15 +89,19 @@ const Post = ({ post, user }: { post: any; user: any | undefined }) => {
       hx-target="body"
       hx-swap="outerHTML"
       id={post._id}
-      class="border p-2 mb-2 bg-white cursor-pointer"
+      class="border p-3 mb-3 bg-white cursor-pointer hover:bg-gray-50"
     >
       <div class="flex justify-between flex-wrap">
-        <div class="flex flex-col sm:flex-row gap-2">
+        <div class="flex flex-col sm:flex-row gap-3">
           <h3 class="text-lg sm:text-xl font-bold">{post.title}</h3>
           {post.user ? (
             <div
               onclick="event.stopPropagation()"
-              class="flex items-center gap-2"
+              hx-get={`/users/${post.userId}`}
+              hx-push-url="true"
+              hx-target="body"
+              hx-swap="outerHTML"
+              class="flex items-center gap-2 hover:underline"
             >
               <img
                 src={post.user.avatar}
