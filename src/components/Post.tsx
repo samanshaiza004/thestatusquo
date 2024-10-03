@@ -120,6 +120,7 @@ const Post = ({ post, user }: { post: any; user: any | undefined }) => {
             <button
               hx-delete={`/api/deletePost/${post._id}`}
               hx-target="#posts"
+              hx-swap="innerHTML"
               hx-confirm="Are you sure you want to delete this post?"
               class="bg-rose-400 text-white px-2 py-1 hover:bg-red-500 text-sm sm:text-base"
               onclick="event.stopPropagation()"
